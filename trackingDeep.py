@@ -1,3 +1,6 @@
+# La base de este proyecto esta en: https://www.youtube.com/watch?v=p-pBHQh8WVI
+# """ Se hicieron las modificaciones para el entrenamiento, la asignación de los IDs y la detección de entradas y salidas
+
 import numpy as np
 import cv2
 from ultralytics import YOLO
@@ -11,6 +14,7 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture("./video2.mp4")
 
     model = YOLO("besttrain3.pt")
+    # model = YOLO("yolov8n.pt")
 
     tracker = Sort()
 
@@ -30,16 +34,26 @@ if __name__ == '__main__':
     out = cv2.VideoWriter('video_anotado.mp4', fourcc,
                           20.0, (int(cap.get(3)), int(cap.get(4))))
 
+    # Crear un arreglo de 8 VINs ficticios de vehículos
+    vins = [
+        "1HGBH41JXMN109186",
+        "2HGES26745H529478",
+        "3FAFP113X1R210939",
+        "4T1BE46KX2U091123",
+        "5J6RE48597L029671",
+        "1G1ZT53806F100235",
+        "2C3KA53G96H178947",
+        "3N1AB7AP4FY279234"
+    ]
+
+    # Diccionario para almacenar el VIN asignado a cada ID
+    track_vins = {}
+
     while cap.isOpened():
         status, frame = cap.read()
 
         if not status:
             break
-
-        # Saltar los frames pares
-        if frame_count % 2 == 0:
-            frame_count += 1
-            continue
 
         # Guardar el primer frame
         if not first_frame_saved:
@@ -66,8 +80,14 @@ if __name__ == '__main__':
             tracks = tracks.astype(int)
 
             for xmin, ymin, xmax, ymax, track_id in tracks:
-                # Dibujar el ID y la caja delimitadora
-                cv2.putText(img=frame, text=f"Id: {track_id}", org=(
+                # Verificar si el objeto pasa por la mitad de la imagen (píxel 180 ± 10) y asignar VIN
+                if 170 <= ymin <= 190 and track_id not in track_vins:
+                    track_vins[track_id] = vins[track_id % len(vins)]
+
+                vin = track_vins.get(track_id, "N/A")
+
+                # Dibujar el ID, VIN y la caja delimitadora
+                cv2.putText(img=frame, text=f"Id: {track_id}, VIN: {vin}", org=(
                     xmin, ymin-10), fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=2, color=(0, 255, 0), thickness=2)
                 cv2.rectangle(img=frame, pt1=(xmin, ymin), pt2=(
                     xmax, ymax), color=(0, 255, 0), thickness=2)
